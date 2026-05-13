@@ -1,16 +1,15 @@
 """
 AAMVA PDF417 Barcode Validator — Flask localhost server
-Run:   python app.py
+Run: python app.py
 Visit: http://127.0.0.1:5000
 """
-import os
-import uuid
-from flask import Flask, request, jsonify, render_template
+import os, uuid, json
+from flask import Flask, request, jsonify, render_template, abort
 from werkzeug.utils import secure_filename
 from PIL import Image
-import cv2
-import numpy as np
+import cv2, numpy as np
 
+# Import both decoding backends for cross-verification
 try:
     from pyzbar.pyzbar import decode as pyzbar_decode
     PYZBAR_OK = True
@@ -26,9 +25,8 @@ except ImportError:
 from aamva_parser import validate_aamva_raw
 
 app = Flask(__name__)
-app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024   # 16 MB
+app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16 MB max upload
 app.config["UPLOAD_FOLDER"] = os.path.join(os.path.dirname(__file__), "uploads")
-
 ALLOWED_EXT = {"png", "jpg", "jpeg", "bmp", "tiff", "tif", "webp"}
 
 
@@ -38,80 +36,87 @@ def allowed_file(filename):
 
 def preprocess_image(path: str):
     """
-    Multi-pass image preprocessing to maximise PDF417 detection success.
-    Returns a list of numpy uint8 arrays (grayscale variants).
+    Multi-pass image preprocessing pipeline to maximize barcode detection.
+    Returns list of numpy arrays (grayscale) to try in order.
     """
     img = cv2.imread(path)
     if img is None:
-        raise ValueError("Cannot read image file — unsupported format or corrupt data.")
-
+        raise ValueError("Cannot read image file")
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    h, w = gray.shape
     candidates = [gray]
 
-    # Upscale small images
+    # Upscale if small
+    h, w = gray.shape
     if max(h, w) < 1000:
         scale = 1000 / max(h, w)
-        up = cv2.resize(gray, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_CUBIC)
+        up = cv2.resize(gray, (int(w * scale), int(h * scale)),
+                        interpolation=cv2.INTER_CUBIC)
         candidates.append(up)
 
-    # Adaptive threshold (handles uneven lighting)
+    # Adaptive threshold
     th = cv2.adaptiveThreshold(
         gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
     )
     candidates.append(th)
 
-    # CLAHE histogram equalisation
+    # CLAHE equalisation
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-    candidates.append(clahe.apply(gray))
+    eq = clahe.apply(gray)
+    candidates.append(eq)
 
     # Sharpen
     kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
-    candidates.append(cv2.filter2D(gray, -1, kernel))
+    sharp = cv2.filter2D(gray, -1, kernel)
+    candidates.append(sharp)
 
     return candidates
 
 
 def decode_barcode(path: str):
     """
-    Attempt PDF417 decoding with both pyzbar and zxing-cpp over multiple
-    preprocessed image variants. Returns (raw_text, engines_dict, consistent).
+    Attempt barcode decoding with every available engine & preprocessing pass.
+    Returns (raw_string, engines_dict, consistent) or raises ValueError.
     """
     variants = preprocess_image(path)
-    pil_orig = Image.open(path)
-    results  = {}   # engine_name -> decoded string
+    pil_img = Image.open(path)
+    results = {}  # engine -> decoded string
 
     for variant in variants:
-        if PYZBAR_OK and "pyzbar" not in results:
-            for d in pyzbar_decode(variant):
+        # pyzbar
+        if PYZBAR_OK:
+            decoded = pyzbar_decode(variant)
+            for d in decoded:
                 if d.type == "PDF417":
                     txt = d.data.decode("utf-8", "replace").strip()
-                    if txt:
+                    if txt and "pyzbar" not in results:
                         results["pyzbar"] = txt
 
-        if ZXING_OK and "zxingcpp" not in results:
-            res = zxingcpp.read_barcode(Image.fromarray(variant))
+        # zxing-cpp
+        if ZXING_OK:
+            pil_v = Image.fromarray(variant)
+            res = zxingcpp.read_barcode(pil_v)
             if res and res.valid and res.format.name == "PDF417":
                 txt = res.text.strip()
-                if txt:
+                if txt and "zxingcpp" not in results:
                     results["zxingcpp"] = txt
 
         if len(results) >= 2:
             break
 
-    # Final fallback on original PIL image
+    # Try original PIL image directly with pyzbar
     if PYZBAR_OK and "pyzbar" not in results:
-        for d in pyzbar_decode(pil_orig):
+        decoded = pyzbar_decode(pil_img)
+        for d in decoded:
             if d.type == "PDF417":
                 results["pyzbar"] = d.data.decode("utf-8", "replace").strip()
 
     if not results:
         raise ValueError(
-            "No PDF417 barcode detected. "
-            "Ensure the image is clear, well-lit, and shows the back of the ID card."
+            "No PDF417 barcode detected in the image. "
+            "Ensure the image is clear, well-lit, and shows the back of the ID."
         )
 
-    values     = list(results.values())
+    values = list(results.values())
     consistent = len(set(values)) == 1 if len(values) > 1 else True
     return values[0], results, consistent
 
@@ -125,48 +130,41 @@ def index():
 def validate():
     if "file" not in request.files:
         return jsonify({"error": "No file provided"}), 400
-
     f = request.files["file"]
     if not f.filename or not allowed_file(f.filename):
-        return jsonify({"error": "Invalid file type. Upload PNG, JPG, BMP, TIFF, or WebP"}), 400
+        return jsonify({"error": "Invalid file type. Upload PNG, JPG, BMP, or TIFF"}), 400
 
-    filename  = secure_filename(f"{uuid.uuid4().hex}_{f.filename}")
+    filename = secure_filename(f"{uuid.uuid4().hex}_{f.filename}")
     save_path = os.path.join(app.config["UPLOAD_FOLDER"], filename)
     f.save(save_path)
 
     try:
         raw, engines, consistent = decode_barcode(save_path)
     except ValueError as e:
+        os.remove(save_path)
         return jsonify({"error": str(e), "stage": "decode"}), 422
     finally:
         if os.path.exists(save_path):
-            os.remove(save_path)   # never persist uploaded files
+            os.remove(save_path)
 
-    result = validate_aamva_raw(raw)
-    result["decode_engines"]   = list(engines.keys())
-    result["engine_agreement"] = consistent
-
+    aamva_result = validate_aamva_raw(raw)
+    aamva_result["decode_engines"] = list(engines.keys())
+    aamva_result["engine_agreement"] = consistent
     if not consistent:
-        result["warnings"].insert(
+        aamva_result["warnings"].insert(
             0,
             "CROSS-ENGINE DISAGREEMENT: pyzbar and zxing-cpp read different data. "
-            "This may indicate a damaged or manipulated barcode."
+            "This may indicate a damaged or manipulated barcode.",
         )
-
-    return jsonify(result)
+    return jsonify(aamva_result)
 
 
 @app.route("/health")
 def health():
-    return jsonify({
-        "status":   "ok",
-        "pyzbar":   PYZBAR_OK,
-        "zxingcpp": ZXING_OK,
-    })
+    return jsonify({"status": "ok", "pyzbar": PYZBAR_OK, "zxingcpp": ZXING_OK})
 
 
 if __name__ == "__main__":
     os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
-    print("\n  AAMVA PDF417 Validator")
-    print("  Running at http://127.0.0.1:5000\n")
+    print("AAMVA Validator running at http://127.0.0.1:5000")
     app.run(host="127.0.0.1", port=5000, debug=False)

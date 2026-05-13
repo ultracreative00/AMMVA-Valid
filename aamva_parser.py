@@ -7,59 +7,107 @@ Anti-fake checks: IIN registry, cross-date logic, field format, state/IIN mismat
 import re
 from datetime import date
 
-# ── Complete Issuer Identification Number (IIN) registry
-# Source: AAMVA 2020 Standard Table D-1 — all 50 states + DC + territories + CA provinces
+# Complete Issuer Identification Number (IIN) registry
+# Source: AAMVA 2020 Standard Table D-1
 AAMVA_IIN = {
-    "636000":("Virginia","VA","US"),      "636001":("New York","NY","US"),
-    "636002":("Massachusetts","MA","US"), "636003":("Maryland","MD","US"),
-    "636004":("North Carolina","NC","US"),"636005":("South Carolina","SC","US"),
-    "636006":("Connecticut","CT","US"),   "636007":("Louisiana","LA","US"),
-    "636008":("Arkansas","AR","US"),      "636009":("Texas","TX","US"),
-    "636010":("Colorado","CO","US"),      "636011":("Georgia","GA","US"),
-    "636012":("Arizona","AZ","US"),       "636013":("California","CA","US"),
-    "636014":("Hawaii","HI","US"),        "636015":("Kansas","KS","US"),
-    "636016":("Mississippi","MS","US"),   "636017":("New Hampshire","NH","US"),
-    "636018":("New Jersey","NJ","US"),    "636019":("Michigan","MI","US"),
-    "636020":("Illinois","IL","US"),      "636021":("Pennsylvania","PA","US"),
-    "636022":("Kentucky","KY","US"),      "636023":("Ohio","OH","US"),
-    "636024":("Florida","FL","US"),       "636025":("Tennessee","TN","US"),
-    "636026":("Indiana","IN","US"),       "636027":("Alabama","AL","US"),
-    "636028":("Nebraska","NE","US"),      "636029":("Missouri","MO","US"),
-    "636030":("Iowa","IA","US"),          "636031":("Minnesota","MN","US"),
-    "636032":("Wisconsin","WI","US"),     "636033":("Washington","WA","US"),
-    "636034":("Oregon","OR","US"),        "636035":("Nevada","NV","US"),
-    "636036":("Idaho","ID","US"),         "636037":("Montana","MT","US"),
-    "636038":("Wyoming","WY","US"),       "636039":("North Dakota","ND","US"),
-    "636040":("South Dakota","SD","US"),  "636041":("Utah","UT","US"),
-    "636042":("New Mexico","NM","US"),    "636043":("Oklahoma","OK","US"),
-    "636044":("Maine","ME","US"),         "636045":("Delaware","DE","US"),
-    "636046":("Rhode Island","RI","US"),  "636047":("Vermont","VT","US"),
-    "636048":("Alaska","AK","US"),        "636049":("West Virginia","WV","US"),
-    "636050":("District of Columbia","DC","US"),
-    "636051":("Puerto Rico","PR","US"),   "636052":("US Virgin Islands","VI","US"),
-    "636053":("Guam","GU","US"),          "636220":("American Samoa","AS","US"),
-    "636055":("Ontario","ON","CA"),       "636056":("Quebec","QC","CA"),
-    "636057":("British Columbia","BC","CA"),"636058":("Alberta","AB","CA"),
-    "636059":("Manitoba","MB","CA"),      "636060":("Saskatchewan","SK","CA"),
-    "636061":("Nova Scotia","NS","CA"),   "636062":("New Brunswick","NB","CA"),
-    "636063":("Newfoundland","NL","CA"),  "636064":("Prince Edward Island","PE","CA"),
-    "636065":("Northwest Territories","NT","CA"),"636066":("Yukon","YT","CA"),
-    "604427":("Alberta","AB","CA"),
+    "636000": ("Virginia", "VA", "US"),
+    "636001": ("New York", "NY", "US"),
+    "636002": ("Massachusetts", "MA", "US"),
+    "636003": ("Maryland", "MD", "US"),
+    "636004": ("North Carolina", "NC", "US"),
+    "636005": ("South Carolina", "SC", "US"),
+    "636006": ("Connecticut", "CT", "US"),
+    "636007": ("Louisiana", "LA", "US"),
+    "636008": ("Arkansas", "AR", "US"),
+    "636009": ("Texas", "TX", "US"),
+    "636010": ("Colorado", "CO", "US"),
+    "636011": ("Georgia", "GA", "US"),
+    "636012": ("Arizona", "AZ", "US"),
+    "636013": ("California", "CA", "US"),
+    "636014": ("Hawaii", "HI", "US"),
+    "636015": ("Kansas", "KS", "US"),
+    "636016": ("Mississippi", "MS", "US"),
+    "636017": ("New Hampshire", "NH", "US"),
+    "636018": ("New Jersey", "NJ", "US"),
+    "636019": ("Michigan", "MI", "US"),
+    "636020": ("Illinois", "IL", "US"),
+    "636021": ("Pennsylvania", "PA", "US"),
+    "636022": ("Kentucky", "KY", "US"),
+    "636023": ("Ohio", "OH", "US"),
+    "636024": ("Florida", "FL", "US"),
+    "636025": ("Tennessee", "TN", "US"),
+    "636026": ("Indiana", "IN", "US"),
+    "636027": ("Alabama", "AL", "US"),
+    "636028": ("Nebraska", "NE", "US"),
+    "636029": ("Missouri", "MO", "US"),
+    "636030": ("Iowa", "IA", "US"),
+    "636031": ("Minnesota", "MN", "US"),
+    "636032": ("Wisconsin", "WI", "US"),
+    "636033": ("Washington", "WA", "US"),
+    "636034": ("Oregon", "OR", "US"),
+    "636035": ("Nevada", "NV", "US"),
+    "636036": ("Idaho", "ID", "US"),
+    "636037": ("Montana", "MT", "US"),
+    "636038": ("Wyoming", "WY", "US"),
+    "636039": ("North Dakota", "ND", "US"),
+    "636040": ("South Dakota", "SD", "US"),
+    "636041": ("Utah", "UT", "US"),
+    "636042": ("New Mexico", "NM", "US"),
+    "636043": ("Oklahoma", "OK", "US"),
+    "636044": ("Maine", "ME", "US"),
+    "636045": ("Delaware", "DE", "US"),
+    "636046": ("Rhode Island", "RI", "US"),
+    "636047": ("Vermont", "VT", "US"),
+    "636048": ("Alaska", "AK", "US"),
+    "636049": ("West Virginia", "WV", "US"),
+    "636050": ("District of Columbia", "DC", "US"),
+    "636051": ("Puerto Rico", "PR", "US"),
+    "636052": ("US Virgin Islands", "VI", "US"),
+    "636053": ("Guam", "GU", "US"),
+    "636220": ("American Samoa", "AS", "US"),
+    "636055": ("Ontario", "ON", "CA"),
+    "636056": ("Quebec", "QC", "CA"),
+    "636057": ("British Columbia", "BC", "CA"),
+    "636058": ("Alberta", "AB", "CA"),
+    "636059": ("Manitoba", "MB", "CA"),
+    "636060": ("Saskatchewan", "SK", "CA"),
+    "636061": ("Nova Scotia", "NS", "CA"),
+    "636062": ("New Brunswick", "NB", "CA"),
+    "636063": ("Newfoundland", "NL", "CA"),
+    "636064": ("Prince Edward Island", "PE", "CA"),
+    "636065": ("Northwest Territories", "NT", "CA"),
+    "636066": ("Yukon", "YT", "CA"),
+    "604427": ("Alberta", "AB", "CA"),
 }
 
 MANDATORY_ELEMENTS = {
-    "DCA":"Vehicle Class","DCB":"Restriction Codes","DCD":"Endorsement Codes",
-    "DBA":"Expiry Date","DCS":"Last Name","DAC":"First Name","DAD":"Middle Name",
-    "DBD":"Issue Date","DBB":"Date of Birth","DBC":"Sex","DAY":"Eye Color",
-    "DAU":"Height","DAG":"Street Address","DAI":"City","DAJ":"State/Province",
-    "DAK":"Postal Code","DAQ":"License/ID Number","DCF":"Document Discriminator",
-    "DCG":"Country Identification","DDE":"Family Name Truncation",
-    "DDF":"First Name Truncation","DDG":"Middle Name Truncation",
+    "DCA": "Vehicle Class",
+    "DCB": "Restriction Codes",
+    "DCD": "Endorsement Codes",
+    "DBA": "Expiry Date",
+    "DCS": "Last Name",
+    "DAC": "First Name",
+    "DAD": "Middle Name",
+    "DBD": "Issue Date",
+    "DBB": "Date of Birth",
+    "DBC": "Sex",
+    "DAY": "Eye Color",
+    "DAU": "Height",
+    "DAG": "Street Address",
+    "DAI": "City",
+    "DAJ": "State/Province",
+    "DAK": "Postal Code",
+    "DAQ": "License/ID Number",
+    "DCF": "Document Discriminator",
+    "DCG": "Country Identification",
+    "DDE": "Family Name Truncation",
+    "DDF": "First Name Truncation",
+    "DDG": "Middle Name Truncation",
 }
 
-EYE_COLORS  = {"BLK","BLU","BRN","GRY","GRN","HAZ","MAR","PNK","DIC","UNK"}
-SEX_CODES   = {"1":"Male","2":"Female","9":"Unknown/Not Specified"}
-TRUNC_CODES = {"T","N","U"}
+EYE_COLORS = {"BLK", "BLU", "BRN", "GRY", "GRN", "HAZ", "MAR", "PNK", "DIC", "UNK"}
+SEX_CODES = {"1": "Male", "2": "Female", "9": "Unknown/Not Specified"}
+TRUNC_CODES = {"T", "N", "U"}
 
 AAMVA_HEADER_RE = re.compile(
     r"@\n?\x1c?\r?ANSI\s+(\d{6})(\d{2})(\d{2})(\d{2})", re.DOTALL
@@ -95,9 +143,9 @@ def parse_date(val: str, version: int):
     if len(val) != 8 or not val.isdigit():
         return None, f"Invalid date string '{val}' (must be 8 digits)"
     try:
-        if version <= 8:   # MMDDCCYY (AAMVA v1-v8)
+        if version <= 8:  # MMDDCCYY
             mm, dd, ccyy = val[0:2], val[2:4], val[4:8]
-        else:              # CCYYMMDD (AAMVA v9+)
+        else:             # CCYYMMDD (version 9+)
             ccyy, mm, dd = val[0:4], val[4:6], val[6:8]
         return date(int(ccyy), int(mm), int(dd)), None
     except ValueError as e:
@@ -136,9 +184,11 @@ def validate_elements(elements, version, iin):
         else:
             parsed["issue_date"] = iss.isoformat()
             if iss > date.today():
-                issues.append("DBD: Issue date is in the future — impossible on a real document")
+                issues.append(
+                    "DBD: Issue date is in the future — impossible on a real document"
+                )
 
-    # Cross-date sanity (anti-fake)
+    # Cross-date sanity checks
     if "issue_date" in parsed and "expiry_date" in parsed:
         i = date.fromisoformat(parsed["issue_date"])
         e = date.fromisoformat(parsed["expiry_date"])
@@ -161,7 +211,9 @@ def validate_elements(elements, version, iin):
     if "DBC" in elements:
         sex = elements["DBC"].strip()
         if sex not in SEX_CODES:
-            issues.append(f"DBC (Sex): Invalid code '{sex}' — must be 1 (Male), 2 (Female), or 9")
+            issues.append(
+                f"DBC (Sex): Invalid code '{sex}' — must be 1 (Male), 2 (Female), or 9"
+            )
         else:
             parsed["sex"] = SEX_CODES[sex]
 
@@ -169,24 +221,34 @@ def validate_elements(elements, version, iin):
     if "DAY" in elements:
         eye = elements["DAY"].strip().upper()
         if eye not in EYE_COLORS:
-            issues.append(f"DAY (Eye Color): Invalid code '{eye}' — must be one of {sorted(EYE_COLORS)}")
+            issues.append(
+                f"DAY (Eye Color): Invalid code '{eye}' — must be one of {sorted(EYE_COLORS)}"
+            )
         else:
             parsed["eye_color"] = eye
 
-    # Height
+    # Height (nnnIN or nnnCM)
     if "DAU" in elements:
         h = elements["DAU"].strip()
         if not re.match(r"^\d{3}(IN|CM)$", h, re.IGNORECASE):
-            issues.append(f"DAU (Height): Invalid format '{h}' — must be nnnIN or nnnCM")
+            issues.append(
+                f"DAU (Height): Invalid format '{h}' — must be nnnIN or nnnCM"
+            )
         else:
             parsed["height"] = h
 
     # Truncation codes
-    for code, label in [("DDE","Family Name"),("DDF","First Name"),("DDG","Middle Name")]:
+    for code, label in [
+        ("DDE", "Family Name"),
+        ("DDF", "First Name"),
+        ("DDG", "Middle Name"),
+    ]:
         if code in elements:
             v = elements[code].strip().upper()
             if v not in TRUNC_CODES:
-                issues.append(f"{code} ({label} Truncation): Invalid code '{v}' — must be T, N, or U")
+                issues.append(
+                    f"{code} ({label} Truncation): Invalid code '{v}' — must be T, N, or U"
+                )
 
     # Country
     if "DCG" in elements:
@@ -202,7 +264,7 @@ def validate_elements(elements, version, iin):
             if mk not in elements:
                 warnings.append(f"Missing mandatory field {mk} ({ml})")
 
-    # IIN vs DAJ state cross-check — primary fake-detector
+    # IIN vs DAJ state cross-check — primary anti-fake detector
     if "DAJ" in elements and iin in AAMVA_IIN:
         expected = AAMVA_IIN[iin][1]
         barcode_state = elements["DAJ"].strip().upper()
@@ -211,20 +273,24 @@ def validate_elements(elements, version, iin):
                 f"CRITICAL STATE MISMATCH: IIN {iin} is registered to "
                 f"{AAMVA_IIN[iin][0]} ({expected}), "
                 f"but barcode field DAJ says '{barcode_state}'. "
-                f"Strong indicator of a fabricated barcode."
+                f"This is a strong indicator of a fabricated barcode."
             )
 
     # Postal code format
     if "DAK" in elements:
-        pk = re.sub(r"[\s\-]", "", elements["DAK"])
-        if not (re.match(r"^\d{5,9}$", pk) or re.match(r"^[A-Z]\d[A-Z]\d[A-Z]\d$", pk, re.I)):
-            issues.append(f"DAK (Postal Code): Suspicious format '{elements['DAK']}'")
+        pk = re.sub(r"[\s-]", "", elements["DAK"])
+        if not (
+            re.match(r"^\d{5,9}$", pk)
+            or re.match(r"^[A-Z]\d[A-Z]\s?\d[A-Z]\d$", pk, re.I)
+        ):
+            issues.append(
+                f"DAK (Postal Code): Suspicious format '{elements['DAK']}'"
+            )
 
     return issues, warnings, parsed
 
 
 def validate_aamva_raw(raw: str):
-    """Master entry point. Returns a structured validation result dict."""
     result = {
         "valid": False,
         "score": 0,
@@ -249,26 +315,31 @@ def validate_aamva_raw(raw: str):
         return result
 
     result["header"] = header
-    iin, version = header["iin"], header["aamva_version"]
+    iin = header["iin"]
+    version = header["aamva_version"]
 
     if iin in AAMVA_IIN:
         j = AAMVA_IIN[iin]
         result["fields"]["issuer"] = {
-            "iin": iin, "state": j[0], "abbreviation": j[1], "country": j[2]
+            "iin": iin,
+            "state": j[0],
+            "abbreviation": j[1],
+            "country": j[2],
         }
     else:
         result["issues"].append(
             f"IIN '{iin}' is NOT in the AAMVA jurisdiction registry. "
             f"All legitimate US/Canadian licenses use registered IINs. "
-            f"Primary indicator of a fabricated barcode."
+            f"This is a primary indicator of a fabricated barcode."
         )
 
     if not (1 <= version <= 10):
-        result["issues"].append(f"AAMVA version {version} is outside valid range (1-10)")
+        result["issues"].append(
+            f"AAMVA version {version} is outside the valid range (1-10)"
+        )
     else:
         result["fields"]["aamva_version"] = version
 
-    # Locate DL or ID subfile
     subfile_body = None
     for st in ("DL", "ID"):
         idx = raw.find(st, header["match_end"])
@@ -285,7 +356,7 @@ def validate_aamva_raw(raw: str):
     result["fields"]["elements"] = elements
 
     vi, vw, vp = validate_elements(elements, version, iin)
-    result["issues"]   += vi
+    result["issues"] += vi
     result["warnings"] += vw
     result["fields"].update(vp)
 
