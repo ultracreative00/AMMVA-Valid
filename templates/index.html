@@ -5,87 +5,143 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AAMVA PDF417 Barcode Validator</title>
 <style>
-:root{--bg:#0d1117;--surface:#161b22;--surface2:#21262d;--border:#30363d;
---text:#e6edf3;--muted:#8b949e;--primary:#238636;--primary-h:#2ea043;
---error:#da3633;--warn:#d29922;--info:#1f6feb;--radius:8px;
---font:'Segoe UI',system-ui,sans-serif}
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#21262d;--border:#30363d;
+  --text:#e6edf3;--muted:#8b949e;--primary:#238636;--primary-h:#2ea043;
+  --error:#da3633;--warn:#d29922;--info:#1f6feb;--radius:8px;
+  --font:'Segoe UI',system-ui,sans-serif
+}
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;
-display:flex;flex-direction:column;align-items:center;padding:2rem 1rem}
+body{
+  background:var(--bg);color:var(--text);font-family:var(--font);
+  min-height:100vh;display:flex;flex-direction:column;
+  align-items:center;padding:2rem 1rem
+}
 header{text-align:center;margin-bottom:2.5rem;max-width:760px;width:100%}
 .logo{display:flex;align-items:center;justify-content:center;gap:.75rem;margin-bottom:.5rem}
 .logo svg{color:#238636}
 h1{font-size:1.75rem;font-weight:700;letter-spacing:-.02em}
 .subtitle{color:var(--muted);font-size:.85rem;margin-top:.4rem;line-height:1.5}
-.badges{display:flex;flex-wrap:wrap;justify-content:center;gap:.4rem;margin-top:.6rem}
-.badge-pill{padding:.2rem .7rem;border-radius:99px;font-size:.7rem;font-weight:600;
-border:1px solid #30363d;color:var(--muted)}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
-padding:1.75rem;width:100%;max-width:760px;margin-bottom:1.25rem}
-.card-title{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;
-color:var(--muted);margin-bottom:1.25rem}
-.drop-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:2.5rem 2rem;
-text-align:center;cursor:pointer;transition:.2s border-color;position:relative}
-.drop-zone:hover,.drop-zone.drag{border-color:#238636;background:rgba(35,134,54,.04)}
-.drop-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.badges{
+  display:flex;flex-wrap:wrap;justify-content:center;
+  gap:.4rem;margin-top:.6rem
+}
+.badge-pill{
+  padding:.2rem .7rem;border-radius:99px;font-size:.7rem;font-weight:600;
+  border:1px solid #30363d;color:var(--muted)
+}
+.card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:1.75rem;
+  width:100%;max-width:760px;margin-bottom:1.25rem
+}
+.card-title{
+  font-size:.7rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.08em;color:var(--muted);margin-bottom:1.25rem
+}
+.drop-zone{
+  border:2px dashed var(--border);border-radius:var(--radius);
+  padding:2.5rem 2rem;text-align:center;cursor:pointer;
+  transition:.2s border-color;position:relative;overflow:hidden
+}
+.drop-zone:hover,.drop-zone.drag{
+  border-color:#238636;background:rgba(35,134,54,.04)
+}
+.drop-zone input[type="file"]{
+  position:absolute;inset:0;opacity:0;cursor:pointer;
+  width:100%;height:100%;font-size:0
+}
 .drop-zone .icon{color:var(--muted);margin-bottom:.75rem}
-.drop-zone p{color:var(--muted);font-size:.9rem}
+.drop-zone p{color:var(--muted);font-size:.9rem;pointer-events:none}
 .hint{font-size:.75rem;margin-top:.35rem;color:#6e7681}
-#preview{max-width:100%;max-height:220px;border-radius:6px;margin-top:1rem;display:none;
-border:1px solid var(--border)}
-.btn{background:var(--primary);color:#fff;border:none;border-radius:var(--radius);
-padding:.65rem 1.5rem;font-size:.9rem;font-weight:600;cursor:pointer;width:100%;
-margin-top:1rem;transition:.15s background}
+#preview{
+  max-width:100%;max-height:220px;border-radius:6px;
+  margin-top:1rem;display:none;border:1px solid var(--border)
+}
+.btn{
+  background:var(--primary);color:#fff;border:none;
+  border-radius:var(--radius);padding:.65rem 1.5rem;
+  font-size:.9rem;font-weight:600;cursor:pointer;
+  width:100%;margin-top:1rem;transition:.15s background
+}
 .btn:hover{background:var(--primary-h)}
 .btn:disabled{opacity:.5;cursor:not-allowed}
+#file-name{
+  margin-top:.6rem;font-size:.78rem;color:var(--muted);
+  display:none;text-align:center
+}
 .spinner{display:none;text-align:center;padding:2rem;color:var(--muted)}
 .spinner svg{animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 #result{display:none}
-.verdict{display:flex;align-items:center;gap:.75rem;padding:1rem 1.25rem;
-border-radius:var(--radius);margin-bottom:1rem;font-weight:700;font-size:1.05rem}
+.verdict{
+  display:flex;align-items:center;gap:.75rem;
+  padding:1rem 1.25rem;border-radius:var(--radius);
+  margin-bottom:1rem;font-weight:700;font-size:1.05rem
+}
 .verdict.pass{background:#0f2a1a;border:1px solid #2ea043;color:#56d364}
 .verdict.fail{background:#2d0f0e;border:1px solid var(--error);color:#ff7b72}
 .score-wrap{margin-bottom:1.5rem}
-.score-label{font-size:.78rem;color:var(--muted);margin-bottom:.35rem;
-display:flex;justify-content:space-between}
+.score-label{
+  font-size:.78rem;color:var(--muted);margin-bottom:.35rem;
+  display:flex;justify-content:space-between
+}
 .score-bar{background:var(--surface2);border-radius:99px;height:10px;overflow:hidden}
 .score-fill{height:100%;border-radius:99px;transition:.5s width}
-.section-title{font-size:.68rem;font-weight:700;text-transform:uppercase;
-letter-spacing:.08em;color:var(--muted);margin:.8rem 0 .5rem;padding-top:.3rem;
-border-top:1px solid var(--border)}
+.section-title{
+  font-size:.68rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:.08em;color:var(--muted);margin:.8rem 0 .5rem;
+  padding-top:.5rem;border-top:1px solid var(--border)
+}
 .section-title:first-child{border-top:none;margin-top:0}
 .tag-list{display:flex;flex-wrap:wrap;gap:.35rem;margin-bottom:.75rem}
-.tag{padding:.2rem .6rem;border-radius:4px;font-size:.76rem;font-weight:500;max-width:100%;
-word-break:break-word;white-space:normal;line-height:1.4}
+.tag{
+  padding:.2rem .6rem;border-radius:4px;font-size:.76rem;
+  font-weight:500;max-width:100%;word-break:break-word;
+  white-space:normal;line-height:1.4
+}
 .tag.err{background:#2d0f0e;color:#ff7b72;border:1px solid #da363355}
 .tag.warn{background:#2b1d09;color:#e3b341;border:1px solid #d2992255}
 .tag.ok{background:#0f2a1a;color:#56d364;border:1px solid #2ea04355}
 .tag.info{background:#0d1b2e;color:#58a6ff;border:1px solid #1f6feb55}
 table{width:100%;border-collapse:collapse;font-size:.82rem}
-table th{text-align:left;color:var(--muted);font-weight:500;padding:.4rem .6rem;
-border-bottom:1px solid var(--border);font-size:.75rem;text-transform:uppercase;
-letter-spacing:.05em}
-table td{padding:.45rem .6rem;border-bottom:1px solid #21262d;word-break:break-all;
-vertical-align:top}
+table th{
+  text-align:left;color:var(--muted);font-weight:500;
+  padding:.4rem .6rem;border-bottom:1px solid var(--border);
+  font-size:.73rem;text-transform:uppercase;letter-spacing:.05em
+}
+table td{
+  padding:.45rem .6rem;border-bottom:1px solid #21262d;
+  word-break:break-all;vertical-align:top
+}
 table tr:last-child td{border-bottom:none}
-table td:first-child{color:var(--muted);font-family:monospace;font-size:.8rem;
-white-space:nowrap;width:1%;padding-right:1rem}
-.sf-block{background:var(--surface2);border:1px solid var(--border);
-border-radius:6px;margin-bottom:.75rem;overflow:hidden}
-.sf-header{display:flex;align-items:center;gap:.5rem;padding:.5rem .75rem;
-border-bottom:1px solid var(--border);cursor:pointer;user-select:none;
-font-size:.8rem;font-weight:600}
+table td:first-child{
+  color:var(--muted);font-family:monospace;font-size:.78rem;
+  white-space:nowrap;width:1%;padding-right:1rem
+}
+.sf-block{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:6px;margin-bottom:.75rem;overflow:hidden
+}
+.sf-header{
+  display:flex;align-items:center;gap:.5rem;padding:.55rem .75rem;
+  cursor:pointer;user-select:none;font-size:.8rem;font-weight:600
+}
 .sf-header:hover{background:rgba(255,255,255,.03)}
+.sf-chevron{margin-left:auto;transition:.2s transform;color:var(--muted)}
 .sf-content{padding:.75rem;display:none}
 .sf-content.open{display:block}
-.el-row td:first-child{color:#58a6ff;font-family:monospace;font-size:.78rem}
-footer{color:var(--muted);font-size:.72rem;margin-top:2rem;text-align:center;line-height:1.7}
+.el-row td:first-child{color:#58a6ff !important;font-family:monospace;font-size:.78rem !important}
+footer{
+  color:var(--muted);font-size:.72rem;
+  margin-top:2rem;text-align:center;line-height:1.7
+}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
 @media(max-width:520px){.grid-2{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
+
 <header>
   <div class="logo">
     <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -94,33 +150,355 @@ footer{color:var(--muted);font-size:.72rem;margin-top:2rem;text-align:center;lin
     </svg>
     <h1>AAMVA PDF417 Validator</h1>
   </div>
-  <p class="subtitle">Strict AAMVA DL/ID Card Design Standard compliance &mdash; Annex A through F &mdash; Versions 1&ndash;10</p>
+  <p class="subtitle">Strict AAMVA DL/ID Card Design Standard &mdash; Annex A through F &mdash; Versions 1&ndash;10</p>
   <div class="badges">
     <span class="badge-pill">50 US States + DC</span>
     <span class="badge-pill">Territories</span>
     <span class="badge-pill">Canadian Provinces</span>
     <span class="badge-pill">200+ Data Elements</span>
     <span class="badge-pill">All Subfile Types</span>
-    <span class="badge-pill">Anti-Fake Layers</span>
+    <span class="badge-pill">10 Anti-Fake Layers</span>
   </div>
 </header>
 
+<!-- Upload Card -->
 <div class="card">
-  <p class="card-title">Upload ID Barcode Image</p>
+  <p class="card-title">&#128247; Upload ID Barcode Image</p>
+
   <div class="drop-zone" id="dropZone">
     <input type="file" id="fileInput" accept=".png,.jpg,.jpeg,.bmp,.tiff,.tif,.webp">
     <div class="icon">
       <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-        <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
       </svg>
     </div>
     <p>Drop image here or click to browse</p>
-    <p class="hint">PNG &middot; JPG &middot; BMP &middot; TIFF &middot; WebP &mdash; max 16 MB<br>Photograph the <strong>back</strong> of the ID for best results</p>
+    <p class="hint">
+      PNG &middot; JPG &middot; BMP &middot; TIFF &middot; WebP &mdash; max 16 MB<br>
+      Photograph the <strong>back</strong> of the ID for best results
+    </p>
   </div>
-  <img id="preview" alt="Barcode preview">
+
+  <p id="file-name"></p>
+  <img id="preview" alt="Selected barcode image preview">
   <button class="btn" id="validateBtn" disabled>&#128270; Validate Barcode</button>
 </div>
 
+<!-- Spinner -->
 <div class="spinner" id="spinner">
-  <svg width="32" height="32" viewBox="0 0 24 24
+  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83
+             M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+  </svg>
+  <p style="margin-top:.6rem">Decoding &amp; validating barcode&hellip;</p>
+</div>
+
+<!-- Results Card -->
+<div class="card" id="result">
+
+  <!-- Verdict -->
+  <div id="verdictBox" class="verdict"></div>
+
+  <!-- Score bar -->
+  <div class="score-wrap">
+    <div class="score-label">
+      <span>Authenticity Score</span>
+      <span id="scoreNum">0 / 100</span>
+    </div>
+    <div class="score-bar"><div class="score-fill" id="scoreFill"></div></div>
+  </div>
+
+  <!-- Issuer info -->
+  <div id="issuerBlock"></div>
+
+  <!-- Issues -->
+  <div id="issuesBlock"></div>
+
+  <!-- Warnings -->
+  <div id="warningsBlock"></div>
+
+  <!-- Parsed identity fields -->
+  <div id="fieldsBlock"></div>
+
+  <!-- Subfile panels -->
+  <div id="subfilesBlock"></div>
+
+  <!-- Raw elements fallback -->
+  <div id="elementsBlock"></div>
+
+</div>
+
+<footer>
+  Runs entirely on localhost &mdash; no data leaves your machine<br>
+  AAMVA DL/ID Card Design Standard, Annex A&ndash;F (2020/2025 editions)
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---- element refs ---- */
+  var fileInput   = document.getElementById('fileInput');
+  var dropZone    = document.getElementById('dropZone');
+  var preview     = document.getElementById('preview');
+  var fileName    = document.getElementById('file-name');
+  var validateBtn = document.getElementById('validateBtn');
+  var spinner     = document.getElementById('spinner');
+  var result      = document.getElementById('result');
+
+  /* ---- file selected ---- */
+  function onFileSelected(file) {
+    if (!file) return;
+    /* show preview */
+    var url = URL.createObjectURL(file);
+    preview.src = url;
+    preview.style.display = 'block';
+    /* show filename */
+    fileName.textContent = file.name + '  (' + (file.size / 1024).toFixed(1) + ' KB)';
+    fileName.style.display = 'block';
+    /* enable button */
+    validateBtn.disabled = false;
+    /* hide old result */
+    result.style.display = 'none';
+  }
+
+  /* ---- listen on the real input ---- */
+  fileInput.addEventListener('change', function () {
+    if (fileInput.files && fileInput.files[0]) {
+      onFileSelected(fileInput.files[0]);
+    }
+  });
+
+  /* ---- drag and drop ---- */
+  ['dragover', 'dragenter'].forEach(function (evt) {
+    dropZone.addEventListener(evt, function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.add('drag');
+    });
+  });
+  ['dragleave', 'dragend'].forEach(function (evt) {
+    dropZone.addEventListener(evt, function () {
+      dropZone.classList.remove('drag');
+    });
+  });
+  dropZone.addEventListener('drop', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    dropZone.classList.remove('drag');
+    var files = e.dataTransfer && e.dataTransfer.files;
+    if (files && files[0]) {
+      /* Reassign to input so FormData picks it up */
+      try {
+        var dt = new DataTransfer();
+        dt.items.add(files[0]);
+        fileInput.files = dt.files;
+      } catch (err) { /* Safari fallback — store separately */ }
+      onFileSelected(files[0]);
+    }
+  });
+
+  /* ---- validate button ---- */
+  validateBtn.addEventListener('click', function () {
+    var file = (fileInput.files && fileInput.files[0]);
+    if (!file) { alert('Please select an image first.'); return; }
+
+    validateBtn.disabled = true;
+    spinner.style.display = 'block';
+    result.style.display  = 'none';
+
+    var fd = new FormData();
+    fd.append('file', file);
+
+    fetch('/validate', { method: 'POST', body: fd })
+      .then(function (resp) {
+        if (!resp.ok) return resp.json().then(function (d) { throw new Error(d.error || resp.statusText); });
+        return resp.json();
+      })
+      .then(function (data) {
+        spinner.style.display = 'none';
+        renderResult(data);
+        validateBtn.disabled = false;
+      })
+      .catch(function (err) {
+        spinner.style.display = 'none';
+        validateBtn.disabled = false;
+        alert('Error: ' + err.message);
+      });
+  });
+
+  /* ================================================================
+     RESULT RENDERER
+  ================================================================ */
+  function renderResult(d) {
+    result.style.display = 'block';
+
+    var score = typeof d.score === 'number' ? d.score : 0;
+
+    /* Verdict */
+    var vb = document.getElementById('verdictBox');
+    vb.className = 'verdict ' + (d.valid ? 'pass' : 'fail');
+    vb.innerHTML = d.valid
+      ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> BARCODE VALID &#8212; Passes AAMVA Compliance'
+      : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> BARCODE FAILED AAMVA VALIDATION';
+
+    /* Score bar */
+    document.getElementById('scoreNum').textContent = score + ' / 100';
+    var fill = document.getElementById('scoreFill');
+    fill.style.width = score + '%';
+    fill.style.background = score >= 80 ? '#238636' : score >= 50 ? '#d29922' : '#da3633';
+
+    /* Issuer */
+    var ib = document.getElementById('issuerBlock');
+    var issuer = d.fields && d.fields.issuer;
+    if (issuer) {
+      var countryLabel = issuer.country === 'US' ? 'United States' : issuer.country === 'CA' ? 'Canada' : issuer.country;
+      var engineTags = '';
+      if (d.decode_engines && d.decode_engines.length) {
+        engineTags = '<span class="tag info">Engines: ' + esc(d.decode_engines.join(', ')) + '</span>';
+      }
+      var agreeTags = d.engine_agreement === false
+        ? '<span class="tag err">&#9888; Engine Disagreement</span>'
+        : '<span class="tag ok">Engines Agree</span>';
+
+      ib.innerHTML =
+        '<p class="section-title">Issuing Jurisdiction</p>' +
+        '<div class="tag-list">' +
+          '<span class="tag ok">IIN: ' + esc(issuer.iin) + '</span>' +
+          '<span class="tag ok">' + esc(issuer.state) + ' (' + esc(issuer.abbreviation) + ')</span>' +
+          '<span class="tag ok">' + esc(countryLabel) + '</span>' +
+          (d.fields.aamva_version ? '<span class="tag ok">AAMVA v' + d.fields.aamva_version + '</span>' : '') +
+          '<span class="tag ok">Subfile: ' + esc(d.subfile_type || '?') + '</span>' +
+          engineTags + agreeTags +
+        '</div>';
+    } else {
+      ib.innerHTML = '';
+    }
+
+    /* Issues */
+    var issB = document.getElementById('issuesBlock');
+    if (d.issues && d.issues.length) {
+      issB.innerHTML =
+        '<p class="section-title">&#10060; Compliance Issues (' + d.issues.length + ')</p>' +
+        '<div class="tag-list">' +
+        d.issues.map(function (i) { return '<span class="tag err">' + esc(i) + '</span>'; }).join('') +
+        '</div>';
+    } else {
+      issB.innerHTML = '<p class="section-title">&#9989; No compliance issues found</p>';
+    }
+
+    /* Warnings */
+    var wB = document.getElementById('warningsBlock');
+    if (d.warnings && d.warnings.length) {
+      wB.innerHTML =
+        '<p class="section-title">&#9888; Warnings (' + d.warnings.length + ')</p>' +
+        '<div class="tag-list">' +
+        d.warnings.map(function (w) { return '<span class="tag warn">' + esc(w) + '</span>'; }).join('') +
+        '</div>';
+    } else {
+      wB.innerHTML = '';
+    }
+
+    /* Parsed identity fields */
+    var fB = document.getElementById('fieldsBlock');
+    var SKIP = { elements: 1, issuer: 1, aamva_version: 1 };
+    var pf = {};
+    if (d.fields) {
+      Object.keys(d.fields).forEach(function (k) {
+        if (!SKIP[k] && typeof d.fields[k] === 'string') pf[k] = d.fields[k];
+      });
+    }
+    if (Object.keys(pf).length) {
+      var rows = Object.keys(pf).map(function (k) {
+        return '<tr><td>' + esc(k.replace(/_/g, ' ')) + '</td><td>' + esc(pf[k]) + '</td></tr>';
+      }).join('');
+      fB.innerHTML =
+        '<p class="section-title">Parsed Identity Fields</p>' +
+        '<table><thead><tr><th>Field</th><th>Value</th></tr></thead>' +
+        '<tbody>' + rows + '</tbody></table>';
+    } else {
+      fB.innerHTML = '';
+    }
+
+    /* Subfile panels */
+    var sfB = document.getElementById('subfilesBlock');
+    if (d.subfiles && d.subfiles.length) {
+      sfB.innerHTML = '<p class="section-title">Subfiles Detected (' + d.subfiles.length + ')</p>';
+      d.subfiles.forEach(function (sf, idx) {
+        var elCount = sf.elements ? Object.keys(sf.elements).length : 0;
+        var panel = document.createElement('div');
+        panel.className = 'sf-block';
+        var iconColor = sf.type === 'DL' || sf.type === 'ID' ? '#56d364' : '#58a6ff';
+        var elRows = '';
+        if (sf.elements && elCount > 0) {
+          elRows = Object.keys(sf.elements).map(function (eid) {
+            return '<tr class="el-row"><td>' + esc(eid) + '</td><td>' + esc(sf.elements[eid]) + '</td></tr>';
+          }).join('');
+        }
+        panel.innerHTML =
+          '<div class="sf-header" onclick="toggleSF(this)">' +
+          '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="' + iconColor + '" stroke-width="2">' +
+          '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h1v8H7zm2 0h2v8H9zm3 0h1v8h-1zm2 0h3v8h-3z"/>' +
+          '</svg>' +
+          '<span>' + esc(sf.type) + '</span>' +
+          '<span style="color:var(--muted);font-weight:400">&mdash; ' + esc(sf.label || '') + '</span>' +
+          '<span style="margin-left:.5rem;color:var(--muted);font-weight:400;font-size:.72rem">' + elCount + ' elements</span>' +
+          '<svg class="sf-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>' +
+          '</div>' +
+          '<div class="sf-content" id="sf-content-' + idx + '">' +
+          (elRows
+            ? '<table><thead><tr><th>Element</th><th>Value</th></tr></thead><tbody>' + elRows + '</tbody></table>'
+            : '<p style="color:var(--muted);font-size:.8rem">No elements parsed from this subfile.</p>') +
+          '</div>';
+        sfB.appendChild(panel);
+      });
+    } else {
+      sfB.innerHTML = '';
+    }
+
+    /* Raw elements fallback (if no subfile panels) */
+    var eB = document.getElementById('elementsBlock');
+    var els = d.fields && d.fields.elements;
+    if (els && Object.keys(els).length && !(d.subfiles && d.subfiles.length)) {
+      var eRows = Object.keys(els).map(function (k) {
+        return '<tr class="el-row"><td>' + esc(k) + '</td><td>' + esc(els[k]) + '</td></tr>';
+      }).join('');
+      eB.innerHTML =
+        '<details style="margin-top:1rem">' +
+        '<summary style="cursor:pointer;color:var(--muted);font-size:.8rem;padding:.4rem 0">' +
+        '&#9658; Raw AAMVA Elements (' + Object.keys(els).length + ')' +
+        '</summary>' +
+        '<table style="margin-top:.5rem"><thead><tr><th>ID</th><th>Value</th></tr></thead>' +
+        '<tbody>' + eRows + '</tbody></table>' +
+        '</details>';
+    } else {
+      eB.innerHTML = '';
+    }
+
+    /* scroll to result */
+    result.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  /* ---- helpers ---- */
+  function esc(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  window.toggleSF = function (header) {
+    var content = header.nextElementSibling;
+    var chevron = header.querySelector('.sf-chevron');
+    var isOpen  = content.classList.contains('open');
+    content.classList.toggle('open', !isOpen);
+    if (chevron) chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+  };
+
+}());
+</script>
+</body>
+</html>
